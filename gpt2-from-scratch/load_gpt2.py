@@ -1,6 +1,7 @@
+## yoinked this file from github -- hehe -- modified it using GPT -- mega yoink
+
 import torch
 import numpy as np
-
 
 def load_weights_into_gpt(model, params):
     """Map TensorFlow GPT-2 checkpoint params → PyTorch model"""

@@ -2,19 +2,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-
-# ----------------------------
-# GELU
-# ----------------------------
 def gelu(x):
     return 0.5 * x * (1.0 + torch.tanh(
         np.sqrt(2 / np.pi) * (x + 0.044715 * (x ** 3))
     ))
 
-
-# ----------------------------
-# LayerNorm (GPT-2 style)
-# ----------------------------
 class LayerNorm(nn.Module):
     def __init__(self, dim, eps=1e-5):
         super().__init__()
@@ -28,10 +20,6 @@ class LayerNorm(nn.Module):
         normed = (x - mean) / torch.sqrt(var + self.eps)
         return self.scale * normed + self.shift
 
-
-# ----------------------------
-# Causal Multi-head Attention
-# ----------------------------
 class CausalSelfAttention(nn.Module):
     def __init__(self, emb_dim, n_heads, context_length=1024, qkv_bias=True, drop_rate=0.0):
         super().__init__()
@@ -47,7 +35,7 @@ class CausalSelfAttention(nn.Module):
         self.attn_drop = nn.Dropout(drop_rate)
         self.resid_drop = nn.Dropout(drop_rate)
 
-        # Causal mask
+        # mask
         mask = torch.tril(torch.ones(context_length, context_length))
         self.register_buffer("mask", mask)
 
@@ -57,7 +45,7 @@ class CausalSelfAttention(nn.Module):
         qkv = self.qkv(x).reshape(B, T, 3, self.n_heads, self.head_dim)
         qkv = qkv.permute(2, 0, 3, 1, 4)
 
-        q, k, v = qkv[0], qkv[1], qkv[2]  # (B, nh, T, hd)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # (batch, n_head, tokens, head_dim)
 
         att = (q @ k.transpose(-2, -1)) * self.scale
         att = att.masked_fill(self.mask[:T, :T] == 0, float("-inf"))
