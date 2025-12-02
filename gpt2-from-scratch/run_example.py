@@ -48,7 +48,7 @@ load_weights_into_gpt(model, params)
 
 tokenizer = load_gpt2_tokenizer("./gpt2/124M")
 
-prompt = "Python is a"
+prompt = "Football is a game"
 num_tokens = 15
 ids = tokenizer(prompt, return_tensors="pt")["input_ids"]
 
