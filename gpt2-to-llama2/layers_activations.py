@@ -14,12 +14,42 @@ class RMSNorm(nn.Module):
         return (x_normed * self.weights).to(dtype=x.dtype)
     
 
-torch.manual_seed(123)
+class silu(nn.Module):
+    def __init__(self):
+        super(silu, self).__init__()
 
-example_batch = torch.randn(2, 3, 4)
+    def forward(self, x):
+        return x * torch.sigmoid(x)
+    
 
-rms_norm = RMSNorm(emb_dim=example_batch.shape[-1])
-rmsnorm_pytorch = torch.nn.RMSNorm(example_batch.shape[-1], eps=1e-5)
-print(rmsnorm_pytorch)
-print(rms_norm)
-# assert torch.allclose(rms_norm(example_batch), rmsnorm_pytorch(example_batch))
+def precompute_rope_params(head_dim, theta_base=10_000, context_length=4096):
+    assert head_dim % 2 == 0, "Embedding dimension must be even."
+
+    inv_freq = 1.0 / (theta_base ** (torch.arange(0, head_dim, 2)[: (head_dim // 2)].float() / head_dim))
+
+    positions = torch.arange(context_length)
+    angles = positions.unsqueeze(1) * inv_freq.unsqueeze(0)
+
+    angles = torch.cat([angles, angles], dim=1)
+
+    cos = torch.cos(angles)
+    sin = torch.sin(angles)
+
+    return cos, sin
+
+def compute_rope(x, cos, sin):
+    batch_size, num_heads, seq_len, head_dim = x.shape
+    assert head_dim % 2 == 0, "Head dim must be even"
+
+    x1 = x[..., :head_dim // 2]
+    x2 = x[..., head_dim // 2 :]
+
+    cos = cos[:seq_len, :].unsqueeze(0).unsqueeze(0)
+    sin = sin[:seq_len, :].unsqueeze(0).unsqueeze(0)
+
+    rotated = torch.cat((-x2, x1), dim=-1)
+    x_rotated = (x * cos) + (rotated * sin)
+
+    return x_rotated.to(dtype=x.dtype)
+
+        
