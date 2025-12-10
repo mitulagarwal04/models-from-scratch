@@ -27,6 +27,7 @@ class MultiHeadAttention(nn.Module):
         assert d_out % num_heads == 0, "d_out must be divisible by num_heads"
 
         self.d_in = d_in
+        self.d_out = d_out
         self.num_heads = num_heads
         self.head_dim = d_out // num_heads
 
@@ -39,8 +40,8 @@ class MultiHeadAttention(nn.Module):
         self.register_buffer(
             "mask",
             torch.triu(torch.ones(context_length, context_length), 
-            diagonal=1)
-        )
+            diagonal=1) 
+        )   
 
         cos, sin = precompute_rope_params(head_dim=self.head_dim, context_length=context_length)
         self.register_buffer("cos", cos)
@@ -64,8 +65,8 @@ class MultiHeadAttention(nn.Module):
         keys = compute_rope(keys, self.cos, self.sin)
         queries = compute_rope(queries, self.cos, self.sin)
 
-        attn_scores = queries @ keys.T(2,3)
-        mask_bool = self.mask.bool()[:num_tokens, num_tokens:]
+        attn_scores = queries @ keys.transpose(2,3)
+        mask_bool = self.mask.bool()[:num_tokens, :num_tokens]
         attn_scores.masked_fill_(mask_bool, -torch.inf)
 
         attn_weights = torch.softmax(attn_scores / keys.shape[-1]**0.5, dim=-1)
